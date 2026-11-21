@@ -23,18 +23,18 @@ export function createCity(scene, options = {}) {
     { name: 'Old Town', x: -120, z: -140, radius: 80 },
   ];
 
-  const matGround = new THREE.MeshLambertMaterial({ color: 0x14161c });
-  const matRoad = new THREE.MeshLambertMaterial({ color: 0x2a2e38 });
-  const matKerb = new THREE.MeshLambertMaterial({ color: 0x3a3f4a });
-  const matSand = new THREE.MeshLambertMaterial({ color: 0xcbb487 });
-  const matWater = new THREE.MeshLambertMaterial({ color: 0x0d2233 });
-  const facadeMats = [0x1b1e26, 0x22262f, 0x191c23, 0x262a34].map(c => new THREE.MeshLambertMaterial({ color: c }));
-  const matWindow = new THREE.MeshStandardMaterial({ color: 0xffb15e, emissive: 0xffb15e, emissiveIntensity: 0.9 });
-  const matLamp = new THREE.MeshLambertMaterial({ color: 0x555b66 });
-  const matLampGlow = new THREE.MeshStandardMaterial({ color: 0xffcf8a, emissive: 0xffb15e, emissiveIntensity: 1.2 });
-  const matTrunk = new THREE.MeshLambertMaterial({ color: 0x6b4f33 });
-  const matFrond = new THREE.MeshLambertMaterial({ color: 0x2f7d3a });
-  const containerMats = [0xb03030, 0x1f7a7a, 0xc9a227].map(c => new THREE.MeshLambertMaterial({ color: c }));
+  const matGround = new THREE.MeshLambertMaterial({ color: 0x2b3040 });
+  const matRoad = new THREE.MeshLambertMaterial({ color: 0x4a5162 });
+  const matKerb = new THREE.MeshLambertMaterial({ color: 0x8a90a0 });
+  const matSand = new THREE.MeshLambertMaterial({ color: 0xd9c49a });
+  const matWater = new THREE.MeshLambertMaterial({ color: 0x1d4a63 });
+  const facadeMats = [0x4a4f5e, 0x5a5148, 0x3f4657, 0x6a5d52].map(c => new THREE.MeshLambertMaterial({ color: c }));
+  const matWindow = new THREE.MeshStandardMaterial({ color: 0xffb15e, emissive: 0xffb15e, emissiveIntensity: 1.6 });
+  const matLamp = new THREE.MeshLambertMaterial({ color: 0x7c8496 });
+  const matLampGlow = new THREE.MeshStandardMaterial({ color: 0xffcf8a, emissive: 0xffb15e, emissiveIntensity: 2.2 });
+  const matTrunk = new THREE.MeshLambertMaterial({ color: 0x7a5c3c });
+  const matFrond = new THREE.MeshLambertMaterial({ color: 0x3f9a4c });
+  const containerMats = [0xc9453f, 0x2b9c9c, 0xd8b03a].map(c => new THREE.MeshLambertMaterial({ color: c }));
 
   const unitBox = new THREE.BoxGeometry(1, 1, 1);
 
