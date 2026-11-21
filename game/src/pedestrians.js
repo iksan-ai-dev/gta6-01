@@ -99,7 +99,7 @@ export class Pedestrians {
       : options.roads
         ? [options.roads]
         : [];
-    this.count = options.count || 0;
+    this.count = Number.isFinite(options.count) && options.count > 0 ? options.count : 44;
     this.rng = mulberry32(options.seed == null ? 1 : options.seed);
 
     this.agents = [];
