@@ -1,79 +1,399 @@
-// The screenshot scenes behind ?shot=start|play|end. Each one plays the real rules forward from a
-// fresh world for a fixed number of steps, steered by a simple autopilot (look ahead each way the
-// paddle could move, keep clear of blocks, chase the lowest coin when that is safe), so the frame
-// is what a short game really looks like and the same seed always gives the same frame.
-import { FIELD, PLAYER, STEP } from './config.js';
-import { EVENT_OVER, KIND_BLOCK } from './world.js';
-import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+// game/src/shots.js
+// Deterministic scene staging for screenshots.
+//
+// The game constructs `new Shots(game)` and the constructor reads the URL's
+// `?shot=` / `?seed=` parameters, staging the requested scene so an external
+// harness can capture it. Once staging completes, `window.__shotReady` is set
+// to true and `window.__game` exposes the live game state.
 
-const START_SECONDS = 5;
-const PLAY_SECONDS = 26;
-const END_LIMIT_SECONDS = 600;
-/**
- * How far ahead, in seconds, the autopilot checks each way it could move: the play scene's pilot
- * looks well ahead and keeps all its lives; the end scene's looks only a moment ahead, so it is
- * caught out once the blocks speed up, as a hurried player is.
- */
-const HORIZON_PLAY = 0.7;
-const HORIZON_END = 0.25;
-const SAMPLE = 1 / 30;
-const DIRECTIONS = [0, -1, 1];
-/** Extra room, each side, it keeps between the paddle and a block. */
-const MARGIN = 10;
+const DEFAULT_SHOT = 'drive';
+const DEFAULT_SEED = 7;
 
-/** Seconds until moving in `direction` (-1, 0, 1) runs the paddle into a block; Infinity when it never does. */
-function timeToHit(state, direction, horizon) {
-  const player = state.player;
-  for (let t = SAMPLE; t <= horizon; t += SAMPLE) {
-    const x = Math.min(FIELD.width - player.width, Math.max(0, player.x + direction * PLAYER.speed * t));
-    for (let index = 0; index < state.items.length; index += 1) {
-      const item = state.items[index];
-      if (!item.active || item.kind !== KIND_BLOCK) continue;
-      const y = item.y + item.speed * t;
-      if (y + item.height > player.y && y < player.y + player.height && item.x < x + player.width + MARGIN && item.x + item.width > x - MARGIN) return t;
-    }
-  }
-  return Infinity;
+// Heading convention: 0 == north (-Z). `forward()` maps a heading to the unit
+// direction the actor faces, so "ahead" is +forward and "behind" is -forward.
+function forward(heading) {
+  return { x: -Math.sin(heading), z: -Math.cos(heading) };
 }
 
-/** Of the safe ways to move, the one toward the lowest coin (or the centre); else the one that is hit last. */
-function autopilot(state, horizon) {
-  const player = state.player;
-  let coin = null;
-  for (let index = 0; index < state.items.length; index += 1) {
-    const item = state.items[index];
-    if (item.active && item.kind !== KIND_BLOCK && (coin === null || item.y > coin.y)) coin = item;
-  }
-  const target = coin === null ? FIELD.width / 2 : coin.x + coin.width / 2;
-  const centre = player.x + player.width / 2;
-  const wanted = target > centre + 8 ? 1 : target < centre - 8 ? -1 : 0;
-  let best = wanted;
-  let bestTime = timeToHit(state, wanted, horizon);
-  for (let index = 0; index < DIRECTIONS.length && bestTime !== Infinity; index += 1) {
-    const time = timeToHit(state, DIRECTIONS[index], horizon);
-    if (time > bestTime) {
-      bestTime = time;
-      best = DIRECTIONS[index];
-    }
-  }
-  return best;
+// mulberry32: deterministic PRNG so a fixed seed always reproduces the scene.
+function makeRng(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-/**
- * Set `world` to the named scene (start, play or end; any other name is start) and return the
- * screen to draw over it and the best score to show.
- */
-export function stageShot(name, world) {
-  world.reset();
-  if (name !== 'play' && name !== 'end') {
-    for (let index = 0; index < START_SECONDS / STEP; index += 1) world.step(STEP, 0, true);
-    return { screen: SCREEN_TITLE, best: 0 };
+// Set only x/z of a target (player, car mesh, agents), leaving y to the game's
+// own ground height so actors stay on the road surface.
+function setXZ(target, x, z) {
+  if (!target) return;
+  target.x = x;
+  target.z = z;
+}
+
+// Set a full x/y/z position (used for the camera).
+function setXYZ(target, x, y, z) {
+  if (!target) return;
+  if (typeof target.set === 'function') target.set(x, y, z);
+  else {
+    target.x = x;
+    target.y = y;
+    target.z = z;
   }
-  const limit = name === 'end' ? END_LIMIT_SECONDS : PLAY_SECONDS;
-  const horizon = name === 'end' ? HORIZON_END : HORIZON_PLAY;
-  for (let index = 0; index < limit / STEP; index += 1) {
-    if (world.step(STEP, autopilot(world.state, horizon), false) & EVENT_OVER) break;
+}
+
+function setHeadingOn(obj, heading) {
+  if (!obj) return;
+  if (typeof obj.setHeading === 'function') obj.setHeading(heading);
+  else if (obj.rotation) obj.rotation.y = heading;
+}
+
+export function shotFromQuery() {
+  const search =
+    typeof location !== 'undefined' && location.search ? location.search : '';
+  const params = new URLSearchParams(search);
+  const shot = params.get('shot') || DEFAULT_SHOT;
+  const seedRaw = params.get('seed');
+  const seed = seedRaw === null ? DEFAULT_SEED : parseInt(seedRaw, 10);
+  return { shot, seed: Number.isFinite(seed) ? seed : DEFAULT_SEED };
+}
+
+export class Shots {
+  constructor(game) {
+    this.game = game;
+    window.__game = game;
+    const { shot, seed } = shotFromQuery();
+    if (shot) this.stage(shot, seed);
   }
-  const over = world.state.lives === 0;
-  return { screen: over ? SCREEN_OVER : SCREEN_PLAY, best: world.state.score };
+
+  stage(name, seed) {
+    this.seed = Number.isFinite(seed) ? seed : DEFAULT_SEED;
+    const rng = makeRng(this.seed);
+    const handlers = {
+      drive: () => this.stageDrive(rng),
+      chase: () => this.stageChase(rng),
+      mission: () => this.stageMission(rng),
+      onfoot: () => this.stageOnfoot(rng),
+    };
+    const fn = handlers[name];
+    if (!fn) throw new Error(`Unknown shot: ${name}`);
+    const result = fn();
+    this.finalize(result);
+    return result;
+  }
+
+  // --- staging helpers ---
+
+  clearScene() {
+    const g = this.game;
+    if (g.police && typeof g.police.clearHeat === 'function') g.police.clearHeat();
+    if (g.traffic && typeof g.traffic.setFrozen === 'function') g.traffic.setFrozen(true);
+    if (g.pedestrians && typeof g.pedestrians.setFrozen === 'function') {
+      g.pedestrians.setFrozen(true);
+    }
+  }
+
+  putPlayerInCar(x, z, heading) {
+    const g = this.game;
+    const player = g.player;
+    let car = null;
+    if (g.vehicles) {
+      if (typeof g.vehicles.spawnPlayerCar === 'function') {
+        car = g.vehicles.spawnPlayerCar(x, z, heading);
+      } else if (typeof g.vehicles.spawn === 'function') {
+        car = g.vehicles.spawn({ x, z, heading, player: true });
+      }
+    }
+    if (!car && g.traffic) {
+      const agents = g.traffic.agents || g.traffic.cars || [];
+      const a = agents[0];
+      car = a && (a.vehicle || a.mesh || a);
+    }
+    if (car) {
+      if (typeof player.enterVehicle === 'function') player.enterVehicle(car);
+      else if (typeof player.setVehicle === 'function') player.setVehicle(car);
+      const mesh = car.mesh || car;
+      setXZ(mesh && mesh.position ? mesh.position : mesh, x, z);
+      setHeadingOn(car, heading);
+    }
+    setXZ(player.position, x, z);
+    if (typeof player.setHeading === 'function') player.setHeading(heading);
+    return car;
+  }
+
+  positionCamera(behindM, upM, lookAheadM, subjectX, subjectZ, heading) {
+    const cam = this.game.camera;
+    if (!cam) return;
+    const f = forward(heading);
+    setXYZ(cam.position, subjectX - f.x * behindM, upM, subjectZ - f.z * behindM);
+    if (typeof cam.lookAt === 'function') {
+      cam.lookAt(
+        subjectX + f.x * lookAheadM,
+        upM * 0.5,
+        subjectZ + f.z * lookAheadM,
+      );
+    }
+  }
+
+  pinTraffic(entries) {
+    const t = this.game.traffic;
+    if (!t) return;
+    if (typeof t.setFrozen === 'function') t.setFrozen(true);
+    const agents = t.agents || t.cars || [];
+    entries.forEach((e, i) => {
+      const a = agents[i];
+      if (!a) return;
+      const unit = a.vehicle || a;
+      const mesh = (unit && unit.mesh) || unit;
+      setXZ(mesh && mesh.position ? mesh.position : mesh, e.x, e.z);
+      setHeadingOn(unit, e.heading);
+    });
+  }
+
+  pinPedestrians(entries) {
+    const p = this.game.pedestrians;
+    if (!p) return;
+    if (typeof p.setFrozen === 'function') p.setFrozen(true);
+    const agents = p.agents || [];
+    entries.forEach((e, i) => {
+      const a = agents[i];
+      if (!a) return;
+      const mesh = a.mesh || a;
+      setXZ(mesh && mesh.position ? mesh.position : mesh, e.x, e.z);
+      setHeadingOn(a, e.heading);
+    });
+  }
+
+  equipSmg() {
+    const c = this.game.combat;
+    const player = this.game.player;
+    if (c) {
+      if (typeof c.equip === 'function') c.equip('smg');
+      else if (typeof c.giveWeapon === 'function') c.giveWeapon('smg');
+      else if (typeof c.setWeapon === 'function') c.setWeapon('smg');
+    } else if (player && typeof player.equip === 'function') {
+      player.equip('smg');
+    }
+  }
+
+  startMission(name) {
+    const m = this.game.missions;
+    if (!m) return null;
+    if (typeof m.start === 'function') return m.start(name);
+    if (typeof m.activate === 'function') return m.activate(name);
+    if (typeof m.setActive === 'function') return m.setActive(name);
+    return null;
+  }
+
+  objectivePosition() {
+    const m = this.game.missions;
+    if (!m) return null;
+    const obj = m.objective || m.currentObjective || (m.current && m.current.objective);
+    if (!obj) return null;
+    const p = obj.position || (obj.marker && obj.marker.position) || obj;
+    if (p && typeof p.x === 'number' && typeof p.z === 'number') {
+      return { x: p.x, z: p.z };
+    }
+    return null;
+  }
+
+  spawnEnemies(entries) {
+    const combat = this.game.combat;
+    if (!combat) return;
+    const spawn = combat.spawnEnemies || combat.spawnHostiles || combat.spawn;
+    if (typeof spawn === 'function') {
+      spawn.call(combat, entries);
+      return;
+    }
+    const actors = combat.enemies || combat.hostiles || [];
+    entries.forEach((e, i) => {
+      const a = actors[i];
+      if (!a) return;
+      const mesh = a.mesh || a;
+      setXZ(mesh && mesh.position ? mesh.position : mesh, e.x, e.z);
+      setHeadingOn(a, e.heading);
+    });
+  }
+
+  setWeather(weather, time) {
+    const city = this.game.city;
+    if (!city) return;
+    if (typeof city.setWeather === 'function') city.setWeather(weather);
+    if (typeof city.setTimeOfDay === 'function') city.setTimeOfDay(time);
+    else if (typeof city.setTime === 'function') city.setTime(time);
+  }
+
+  describe(name, extra) {
+    return Object.assign({ shot: name, seed: this.seed }, extra);
+  }
+
+  // --- the four scenes ---
+
+  stageDrive(rng) {
+    this.clearScene();
+    const x = 0;
+    const z = 0;
+    const heading = 0; // north
+    this.putPlayerInCar(x, z, heading);
+    this.setWeather('clear', 'sunset');
+    // Traffic ahead (north); buildings line both sides of the straight road.
+    const traffic = [];
+    for (let i = 0; i < 5; i += 1) {
+      traffic.push({
+        x: -3 + rng() * 6,
+        z: -(12 + i * 8 + rng() * 4),
+        heading: 0,
+      });
+    }
+    this.pinTraffic(traffic);
+    this.pinPedestrians([
+      { x: 7, z: 5, heading: Math.PI },
+      { x: -7, z: 8, heading: 0 },
+    ]);
+    this.positionCamera(11, 5, 20, x, z, heading);
+    return this.describe('drive', {
+      description: 'car on a straight road heading north at sunset, clear weather',
+      vehicle: true,
+      wanted: 0,
+      camera: '11 m behind, 5 m up, looking 20 m ahead',
+    });
+  }
+
+  stageChase(rng) {
+    this.clearScene();
+    const x = 0;
+    const z = 0;
+    const heading = 0; // north
+    this.putPlayerInCar(x, z, heading);
+    // Six cruisers in a wide V, 12-40 m ahead, each facing back toward the player.
+    const blockade = [
+      { x: 0, z: -12 },
+      { x: -5, z: -19 },
+      { x: 5, z: -19 },
+      { x: -10, z: -28 },
+      { x: 10, z: -28 },
+      { x: 0, z: -40 },
+    ].map((p) => ({ ...p, heading: Math.PI })); // facing south, back at the player
+    if (this.game.police && typeof this.game.police.stage === 'function') {
+      this.game.police.stage(blockade);
+    }
+    if (this.game.police && typeof this.game.police.addHeat === 'function') {
+      this.game.police.addHeat(5);
+    }
+    this.startMission('the-drop');
+    this.equipSmg();
+    this.positionCamera(11, 4.8, 20, x, z, heading);
+    return this.describe('chase', {
+      description: 'car heading north into a six-cruiser police blockade',
+      vehicle: true,
+      wanted: 5,
+      mission: 'the-drop',
+      weapon: 'smg',
+      camera: '11 m behind, 4.8 m up',
+    });
+  }
+
+  stageMission(rng) {
+    this.clearScene();
+    this.startMission('the-drop');
+    const obj = this.objectivePosition();
+    const ox = obj ? obj.x : 0;
+    const oz = obj ? obj.z : -48;
+    const heading = 0; // north, toward the marker
+    const px = ox;
+    const pz = oz + 24; // 24 m south of the objective marker
+    const player = this.game.player;
+    setXZ(player.position, px, pz);
+    if (typeof player.setHeading === 'function') player.setHeading(heading);
+    if (this.game.police && typeof this.game.police.addHeat === 'function') {
+      this.game.police.addHeat(1);
+    }
+    this.pinPedestrians([{ x: px + 4, z: pz - 1, heading: heading }]);
+    this.positionCamera(7, 3.5, 24, px, pz, heading);
+    return this.describe('mission', {
+      description: 'on foot 24 m south of the objective marker',
+      onFoot: true,
+      wanted: 1,
+      mission: 'the-drop',
+      camera: '7 m behind, 3.5 m up, looking at the objective marker',
+    });
+  }
+
+  stageOnfoot(rng) {
+    this.clearScene();
+    const x = 0;
+    const z = 0;
+    const heading = 0; // north
+    const player = this.game.player;
+    setXZ(player.position, x, z);
+    if (typeof player.setHeading === 'function') player.setHeading(heading);
+    if (this.game.police && typeof this.game.police.addHeat === 'function') {
+      this.game.police.addHeat(3);
+    }
+    this.equipSmg();
+    // Four hostile enemies 8-20 m ahead, facing the player.
+    const enemies = [];
+    for (let i = 0; i < 4; i += 1) {
+      enemies.push({
+        x: -3 + rng() * 6,
+        z: -(8 + rng() * 12),
+        heading: Math.PI, // facing south, toward the player
+      });
+    }
+    this.spawnEnemies(enemies);
+    this.positionCamera(6, 3, 12, x, z, heading);
+    return this.describe('onfoot', {
+      description: 'on foot facing four hostile enemies ahead',
+      onFoot: true,
+      enemies: 4,
+      wanted: 3,
+      weapon: 'smg',
+      camera: '6 m behind, 3 m up',
+    });
+  }
+
+  // --- HUD + finalize ---
+
+  finalize(result) {
+    this.updateHud(result);
+    window.__shotReady = true;
+    window.__game = this.game;
+  }
+
+  updateHud(result) {
+    const hud = this.game.hud;
+    const police = this.game.police;
+    if (!hud) return;
+    if (typeof hud.show === 'function') hud.show();
+    const set = (method, value) => {
+      if (typeof hud[method] === 'function') hud[method](value);
+    };
+    const stars =
+      police && typeof police.stars === 'number'
+        ? police.stars
+        : result.wanted || 0;
+    set('setHealth', 100);
+    set('setArmour', result.weapon === 'smg' ? 100 : 50);
+    set('setCash', 2500);
+    set('setStars', stars);
+    set('setDistrict', 'Downtown');
+    set('setMission', result.mission ? `Objective: ${result.mission}` : 'No active mission');
+    set('setPolice', this.policeRows());
+    set('setLoadout', result.weapon ? [result.weapon] : ['pistol']);
+    set('setSpeed', result.vehicle ? 24 : 0);
+    set('setSubtitle', result.description || result.shot);
+  }
+
+  policeRows() {
+    const police = this.game.police;
+    const units = (police && (police.units || police.cruisers || police.active)) || [];
+    return (Array.isArray(units) ? units : []).slice(0, 8).map((u) => ({
+      name: (u && u.name) || 'Cruiser',
+      distance: u && typeof u.distance === 'number' ? Math.round(u.distance) : 0,
+    }));
+  }
 }
