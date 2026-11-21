@@ -63,7 +63,7 @@ export class Hud {
     const n = Math.max(0, Math.min(5, Math.round(Number(count) || 0)));
     let html = '';
     for (let i = 0; i < 5; i++) {
-      html += `<span class="${i < n ? 'star' : 'star empty'}"></span>`;
+      html += `<span class="${i < n ? 'star' : 'star empty'}">★</span>`;
     }
     this.starsLine.innerHTML = html;
   }

@@ -6,6 +6,8 @@
 // harness can capture it. Once staging completes, `window.__shotReady` is set
 // to true and `window.__game` exposes the live game state.
 
+import { WEAPONS } from './combat.js';
+
 const DEFAULT_SHOT = 'drive';
 const DEFAULT_SEED = 7;
 
@@ -231,12 +233,26 @@ export class Shots {
     return Object.assign({ shot: name, seed: this.seed }, extra);
   }
 
+  blockade() {
+    // Six cruisers in a wide V, 12-40 m ahead, facing back toward the player.
+    const bx = this.baseX || 0;
+    const bz = this.baseZ || 0;
+    return [
+      { x: 0, z: -12 },
+      { x: -5, z: -19 },
+      { x: 5, z: -19 },
+      { x: -10, z: -28 },
+      { x: 10, z: -28 },
+      { x: 0, z: -40 },
+    ].map((p) => ({ x: p.x + bx, z: p.z + bz, heading: Math.PI }));
+  }
+
   // --- the four scenes ---
 
   stageDrive(rng) {
     this.clearScene();
-    const x = 0;
-    const z = 0;
+    const x = -45;
+    const z = -180;
     const heading = 0; // north
     this.putPlayerInCar(x, z, heading);
     this.setWeather('clear', 'sunset');
@@ -244,15 +260,15 @@ export class Shots {
     const traffic = [];
     for (let i = 0; i < 5; i += 1) {
       traffic.push({
-        x: -3 + rng() * 6,
-        z: -(12 + i * 8 + rng() * 4),
+        x: x + (-3 + rng() * 6),
+        z: z - (12 + i * 8 + rng() * 4),
         heading: 0,
       });
     }
     this.pinTraffic(traffic);
     this.pinPedestrians([
-      { x: 7, z: 5, heading: Math.PI },
-      { x: -7, z: 8, heading: 0 },
+      { x: x + 7, z: z + 5, heading: Math.PI },
+      { x: x - 7, z: z + 8, heading: 0 },
     ]);
     this.positionCamera(11, 5, 20, x, z, heading);
     return this.describe('drive', {
@@ -265,19 +281,14 @@ export class Shots {
 
   stageChase(rng) {
     this.clearScene();
-    const x = 0;
-    const z = 0;
+    const x = -45;
+    const z = -180;
     const heading = 0; // north
+    this.baseX = x;
+    this.baseZ = z;
     this.putPlayerInCar(x, z, heading);
     // Six cruisers in a wide V, 12-40 m ahead, each facing back toward the player.
-    const blockade = [
-      { x: 0, z: -12 },
-      { x: -5, z: -19 },
-      { x: 5, z: -19 },
-      { x: -10, z: -28 },
-      { x: 10, z: -28 },
-      { x: 0, z: -40 },
-    ].map((p) => ({ ...p, heading: Math.PI })); // facing south, back at the player
+    const blockade = this.blockade();
     if (this.game.police && typeof this.game.police.stage === 'function') {
       this.game.police.stage(blockade);
     }
@@ -301,8 +312,8 @@ export class Shots {
     this.clearScene();
     this.startMission('the-drop');
     const obj = this.objectivePosition();
-    const ox = obj ? obj.x : 0;
-    const oz = obj ? obj.z : -48;
+    const ox = obj ? obj.x : -45;
+    const oz = obj ? obj.z : -180;
     const heading = 0; // north, toward the marker
     const px = ox;
     const pz = oz + 24; // 24 m south of the objective marker
@@ -325,8 +336,8 @@ export class Shots {
 
   stageOnfoot(rng) {
     this.clearScene();
-    const x = 0;
-    const z = 0;
+    const x = 45;
+    const z = 180;
     const heading = 0; // north
     const player = this.game.player;
     setXZ(player.position, x, z);
@@ -339,8 +350,8 @@ export class Shots {
     const enemies = [];
     for (let i = 0; i < 4; i += 1) {
       enemies.push({
-        x: -3 + rng() * 6,
-        z: -(8 + rng() * 12),
+        x: x + (-3 + rng() * 6),
+        z: z - (8 + rng() * 12),
         heading: Math.PI, // facing south, toward the player
       });
     }
@@ -359,41 +370,176 @@ export class Shots {
   // --- HUD + finalize ---
 
   finalize(result) {
+    // Hide the start and pause screens so only the HUD is captured.
+    if (this.game.startScreen) this.game.startScreen.classList.add('hidden');
+    if (this.game.pauseScreen) this.game.pauseScreen.classList.add('hidden');
+
+    // Pin the police state to the shot's intent so the stars, the cruiser
+    // count and the wanted readout all agree before the HUD refresh.
+    this.pinPolice(result);
+
+    // Stop the running game loop from overwriting the pinned HUD.
+    this.game.shotStaged = true;
+
     this.updateHud(result);
     window.__shotReady = true;
     window.__game = this.game;
   }
 
+  pinPolice(result) {
+    const police = this.game.police;
+    if (!police) return;
+    const wanted = result && typeof result.wanted === 'number' ? result.wanted : 0;
+
+    if (wanted === 0) {
+      // No heat, no cruisers.
+      if (typeof police.clearHeat === 'function') police.clearHeat();
+      return;
+    }
+
+    if (wanted === 5) {
+      // Five stars plus the blockade cruisers the chase shot expects.
+      if (typeof police.addHeat === 'function') police.addHeat(100);
+      if (typeof police.stage === 'function') police.stage(this.blockade());
+      return;
+    }
+
+    if (wanted === 1) {
+      // Exactly one star and no cruisers.
+      if (typeof police.clearHeat === 'function') police.clearHeat();
+      if (typeof police.addHeat === 'function') police.addHeat(20);
+      if (typeof police.clear === 'function') police.clear();
+      return;
+    }
+
+    if (wanted === 3) {
+      // Exactly three stars and no cruisers.
+      if (typeof police.clearHeat === 'function') police.clearHeat();
+      if (typeof police.addHeat === 'function') police.addHeat(60);
+      if (typeof police.clear === 'function') police.clear();
+    }
+  }
+
   updateHud(result) {
     const hud = this.game.hud;
-    const police = this.game.police;
     if (!hud) return;
     if (typeof hud.show === 'function') hud.show();
-    const set = (method, value) => {
-      if (typeof hud[method] === 'function') hud[method](value);
+
+    const hasSmg = result.weapon === 'smg';
+
+    // Health and armour: the HUD wants both current AND max.
+    if (typeof hud.setHealth === 'function') hud.setHealth(100, 100);
+    if (typeof hud.setArmour === 'function') hud.setArmour(hasSmg ? 100 : 50, 100);
+
+    // Cash is a number; the HUD adds the dollar sign.
+    if (typeof hud.setCash === 'function') hud.setCash(2500);
+
+    if (typeof hud.setStars === 'function') hud.setStars(this.starCount(result));
+
+    if (typeof hud.setDistrict === 'function') hud.setDistrict('Downtown');
+
+    // Mission: a view object, or null to hide the panel.
+    if (typeof hud.setMission === 'function') hud.setMission(this.buildMissionView(result));
+
+    // Police: count first, then the unit rows.
+    if (typeof hud.setPolice === 'function') {
+      const rows = this.policeRows();
+      hud.setPolice(rows.length, rows);
+    }
+
+    // Loadout: a weapons array plus the selected id.
+    if (typeof hud.setLoadout === 'function') {
+      const weapons = this.buildLoadout(result);
+      hud.setLoadout(weapons, hasSmg ? result.weapon : 'fists');
+    }
+
+    if (typeof hud.setSpeed === 'function') hud.setSpeed(this.speedKmh(result));
+
+    if (typeof hud.setSubtitle === 'function') {
+      hud.setSubtitle(result.description || result.shot);
+    }
+
+    // Draw the minimap in screenshot mode too.
+    if (typeof hud.drawMinimap === 'function') hud.drawMinimap(this.minimapState());
+  }
+
+  starCount(result) {
+    if (result && typeof result.wanted === 'number') return result.wanted;
+    const police = this.game.police;
+    if (police && typeof police.stars === 'number') return police.stars;
+    return 0;
+  }
+
+  buildMissionView(result) {
+    if (result.shot !== 'chase' && result.shot !== 'mission') return null;
+    if (typeof this.game.missionView === 'function') {
+      const view = this.game.missionView();
+      if (view) return view;
+    }
+    return {
+      title: 'The Drop',
+      step: 1,
+      total: 2,
+      objective: result.mission || 'Reach the drop point at the docks',
+      reward: 1500,
     };
-    const stars =
-      police && typeof police.stars === 'number'
-        ? police.stars
-        : result.wanted || 0;
-    set('setHealth', 100);
-    set('setArmour', result.weapon === 'smg' ? 100 : 50);
-    set('setCash', 2500);
-    set('setStars', stars);
-    set('setDistrict', 'Downtown');
-    set('setMission', result.mission ? `Objective: ${result.mission}` : 'No active mission');
-    set('setPolice', this.policeRows());
-    set('setLoadout', result.weapon ? [result.weapon] : ['pistol']);
-    set('setSpeed', result.vehicle ? 24 : 0);
-    set('setSubtitle', result.description || result.shot);
   }
 
   policeRows() {
     const police = this.game.police;
+    const player = this.game.player;
     const units = (police && (police.units || police.cruisers || police.active)) || [];
-    return (Array.isArray(units) ? units : []).slice(0, 8).map((u) => ({
-      name: (u && u.name) || 'Cruiser',
-      distance: u && typeof u.distance === 'number' ? Math.round(u.distance) : 0,
-    }));
+    return (Array.isArray(units) ? units : []).slice(0, 8).map((u) => {
+      const label = (u && (u.label || u.name || u.type)) || 'Police';
+      let distance;
+      if (u && typeof u.distance === 'number') {
+        distance = u.distance;
+      } else if (u && police && typeof police.distanceToPlayer === 'function') {
+        distance = police.distanceToPlayer(u);
+      } else if (u && u.position && player && player.position) {
+        distance = Math.hypot(u.position.x - player.position.x, u.position.z - player.position.z);
+      } else {
+        distance = 0;
+      }
+      return { label, distance: Math.round(distance) };
+    });
+  }
+
+  buildLoadout(result) {
+    const list = [this.weaponEntry('fists')];
+    if (result.weapon && result.weapon !== 'fists') {
+      list.push(this.weaponEntry(result.weapon));
+    }
+    return list;
+  }
+
+  weaponEntry(id) {
+    const def = WEAPONS ? WEAPONS[id] : null;
+    return {
+      id,
+      name: (def && def.name) || (id.charAt(0).toUpperCase() + id.slice(1)),
+      ammo: (def && typeof def.ammo === 'number') ? def.ammo : (id === 'fists' ? Infinity : 30),
+      reserve: id === 'fists' ? null : 90,
+    };
+  }
+
+  speedKmh(result) {
+    if (!result.vehicle) return 0;
+    return Math.round(24 * 3.6); // staged cruise speed, m/s -> km/h
+  }
+
+  minimapState() {
+    if (typeof this.game.buildMinimapState === 'function') {
+      return this.game.buildMinimapState();
+    }
+    const p = this.game.player;
+    return {
+      roads: [],
+      police: [],
+      waypoint: null,
+      player: p && p.position ? { x: p.position.x, z: p.position.z } : { x: 0, z: 0 },
+      range: 760,
+      heading: p ? p.heading : 0,
+    };
   }
 }

@@ -39,6 +39,29 @@ function asVec(p) {
 // cannot be understood. Returns { axis, min, max, cross, length } where axis is
 // the axis the road runs along and cross is the fixed perpendicular coordinate.
 function roadGeometry(road) {
+  // Primary case: city.js roads use { x, z, w, d, axis }.
+  // axis 'x': centred at (x, z), runs along x, length w, thickness d.
+  // axis 'z': centred at (x, z), runs along z, length d, thickness w.
+  if (
+    road &&
+    (road.axis === 'x' || road.axis === 'z') &&
+    typeof road.x === 'number' &&
+    typeof road.z === 'number' &&
+    typeof road.w === 'number' &&
+    typeof road.d === 'number'
+  ) {
+    const axis = road.axis;
+    const length = axis === 'x' ? road.w : road.d;
+    const along = axis === 'x' ? road.x : road.z;
+    const cross = axis === 'x' ? road.z : road.x;
+    const min = along - length / 2;
+    const max = along + length / 2;
+    if (!isFinite(min) || !isFinite(max) || max <= min) return null;
+    return { axis, min, max, cross, length: max - min };
+  }
+
+  // Fallback: endpoint-based shapes ({ start/end, from/to, a/b, p0/p1 })
+  // and centre+length shapes ({ position/center/pos, length }).
   const s = asVec(road.start ?? road.from ?? road.a ?? road.p0);
   const e = asVec(road.end ?? road.to ?? road.b ?? road.p1);
 
@@ -76,7 +99,7 @@ export class Pedestrians {
       : options.roads
         ? [options.roads]
         : [];
-    this.count = options.count || 0;
+    this.count = Number.isFinite(options.count) && options.count > 0 ? options.count : 44;
     this.rng = mulberry32(options.seed == null ? 1 : options.seed);
 
     this.agents = [];
