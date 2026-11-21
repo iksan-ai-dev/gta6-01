@@ -30,7 +30,7 @@ export function createCity(scene, options = {}) {
   const matSand = new THREE.MeshLambertMaterial({ color: 0xd9c49a });
   const matWater = new THREE.MeshLambertMaterial({ color: 0x1d4a63 });
   const facadeMats = [0x4a4f5e, 0x5a5148, 0x3f4657, 0x6a5d52].map(c => new THREE.MeshLambertMaterial({ color: c }));
-  const matWindow = new THREE.MeshStandardMaterial({ color: 0xffb15e, emissive: 0xffb15e, emissiveIntensity: 1.6 });
+  const matWindow = new THREE.MeshStandardMaterial({ color: 0xffb15e, emissive: 0xffb15e, emissiveIntensity: 0.85 });
   const matLamp = new THREE.MeshLambertMaterial({ color: 0x7c8496 });
   const matLampGlow = new THREE.MeshStandardMaterial({ color: 0xffcf8a, emissive: 0xffb15e, emissiveIntensity: 2.2 });
   const matTrunk = new THREE.MeshLambertMaterial({ color: 0x7a5c3c });
@@ -91,13 +91,13 @@ export function createCity(scene, options = {}) {
     const rows = Math.max(2, Math.min(8, Math.round(h / 5)));
     const colsW = Math.max(1, Math.min(6, Math.round(w / 5)));
     const colsD = Math.max(1, Math.min(6, Math.round(d / 5)));
-    const winH = Math.max(0.6, (h - 3) / rows);
     const winD = 0.12;
     const step = (h - 2.4) / rows;
+    const winH = 0.5 * step;
     for (let r = 0; r < rows; r++) {
       const y = 1.2 + (r + 0.5) * step;
-      const winWx = Math.max(0.5, (w - 2) / colsW);
-      const winWz = Math.max(0.5, (d - 2) / colsD);
+      const winWx = 0.55 * (w / colsW);
+      const winWz = 0.55 * (d / colsD);
       for (let c = 0; c < colsW; c++) {
         const x = bx - w / 2 + (c + 0.5) * (w / colsW);
         windowInstances.push({ p: [x, y, bz + d / 2 + winD], ry: 0, s: [winWx, winH, winD] });

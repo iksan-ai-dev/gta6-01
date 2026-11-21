@@ -457,9 +457,33 @@ export class Game {
 
   buildMinimapState() {
     const p = this.player;
+    const resolveUnit = (u) => {
+      if (!u) return null;
+      let x;
+      let z;
+      if (u.position && typeof u.position.x === 'number' && typeof u.position.z === 'number') {
+        x = u.position.x;
+        z = u.position.z;
+      } else if (
+        u.mesh && u.mesh.position &&
+        typeof u.mesh.position.x === 'number' && typeof u.mesh.position.z === 'number'
+      ) {
+        x = u.mesh.position.x;
+        z = u.mesh.position.z;
+      } else if (typeof u.x === 'number' && typeof u.z === 'number') {
+        x = u.x;
+        z = u.z;
+      } else {
+        return null;
+      }
+      if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
+      return { x, z };
+    };
     return {
       roads: this.buildRoadSegments(),
-      police: (this.police.units || []).map((u) => ({ x: u.position.x, z: u.position.z })),
+      police: (this.police.units || [])
+        .map(resolveUnit)
+        .filter((blip) => blip !== null),
       waypoint: this.getWaypoint(),
       player: { x: p.position.x, z: p.position.z },
       range: 760,
