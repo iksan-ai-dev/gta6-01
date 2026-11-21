@@ -235,6 +235,8 @@ export class Shots {
 
   blockade() {
     // Six cruisers in a wide V, 12-40 m ahead, facing back toward the player.
+    const bx = this.baseX || 0;
+    const bz = this.baseZ || 0;
     return [
       { x: 0, z: -12 },
       { x: -5, z: -19 },
@@ -242,15 +244,15 @@ export class Shots {
       { x: -10, z: -28 },
       { x: 10, z: -28 },
       { x: 0, z: -40 },
-    ].map((p) => ({ ...p, heading: Math.PI }));
+    ].map((p) => ({ x: p.x + bx, z: p.z + bz, heading: Math.PI }));
   }
 
   // --- the four scenes ---
 
   stageDrive(rng) {
     this.clearScene();
-    const x = 0;
-    const z = 0;
+    const x = -45;
+    const z = -180;
     const heading = 0; // north
     this.putPlayerInCar(x, z, heading);
     this.setWeather('clear', 'sunset');
@@ -258,15 +260,15 @@ export class Shots {
     const traffic = [];
     for (let i = 0; i < 5; i += 1) {
       traffic.push({
-        x: -3 + rng() * 6,
-        z: -(12 + i * 8 + rng() * 4),
+        x: x + (-3 + rng() * 6),
+        z: z - (12 + i * 8 + rng() * 4),
         heading: 0,
       });
     }
     this.pinTraffic(traffic);
     this.pinPedestrians([
-      { x: 7, z: 5, heading: Math.PI },
-      { x: -7, z: 8, heading: 0 },
+      { x: x + 7, z: z + 5, heading: Math.PI },
+      { x: x - 7, z: z + 8, heading: 0 },
     ]);
     this.positionCamera(11, 5, 20, x, z, heading);
     return this.describe('drive', {
@@ -279,9 +281,11 @@ export class Shots {
 
   stageChase(rng) {
     this.clearScene();
-    const x = 0;
-    const z = 0;
+    const x = -45;
+    const z = -180;
     const heading = 0; // north
+    this.baseX = x;
+    this.baseZ = z;
     this.putPlayerInCar(x, z, heading);
     // Six cruisers in a wide V, 12-40 m ahead, each facing back toward the player.
     const blockade = this.blockade();
@@ -308,8 +312,8 @@ export class Shots {
     this.clearScene();
     this.startMission('the-drop');
     const obj = this.objectivePosition();
-    const ox = obj ? obj.x : 0;
-    const oz = obj ? obj.z : -48;
+    const ox = obj ? obj.x : -45;
+    const oz = obj ? obj.z : -180;
     const heading = 0; // north, toward the marker
     const px = ox;
     const pz = oz + 24; // 24 m south of the objective marker
@@ -332,8 +336,8 @@ export class Shots {
 
   stageOnfoot(rng) {
     this.clearScene();
-    const x = 0;
-    const z = 0;
+    const x = 45;
+    const z = 180;
     const heading = 0; // north
     const player = this.game.player;
     setXZ(player.position, x, z);
@@ -346,8 +350,8 @@ export class Shots {
     const enemies = [];
     for (let i = 0; i < 4; i += 1) {
       enemies.push({
-        x: -3 + rng() * 6,
-        z: -(8 + rng() * 12),
+        x: x + (-3 + rng() * 6),
+        z: z - (8 + rng() * 12),
         heading: Math.PI, // facing south, toward the player
       });
     }
