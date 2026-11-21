@@ -13,6 +13,7 @@ function mulberry32(seed) {
 export function createCity(scene, options = {}) {
   const rand = mulberry32(options.seed ?? 1337);
   const group = new THREE.Group();
+  if (scene) scene.add(group);
   const roads = [];
   const buildings = [];
   const districts = [
