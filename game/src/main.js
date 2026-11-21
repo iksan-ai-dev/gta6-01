@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { createCity } from './city.js';
 import { Player, forwardVector } from './player.js';
 import { Vehicle } from './vehicles.js';
