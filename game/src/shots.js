@@ -361,6 +361,16 @@ export class Shots {
   // --- HUD + finalize ---
 
   finalize(result) {
+    // Hide the start and pause screens so only the HUD is captured.
+    if (this.game.startScreen) this.game.startScreen.classList.add('hidden');
+    if (this.game.pauseScreen) this.game.pauseScreen.classList.add('hidden');
+
+    // A clean shot must not carry leftover heat from earlier staging.
+    if (result && result.wanted === 0) {
+      const police = this.game.police;
+      if (police && typeof police.clearHeat === 'function') police.clearHeat();
+    }
+
     this.updateHud(result);
     window.__shotReady = true;
     window.__game = this.game;
@@ -410,9 +420,10 @@ export class Shots {
   }
 
   starCount(result) {
+    if (result && typeof result.wanted === 'number') return result.wanted;
     const police = this.game.police;
     if (police && typeof police.stars === 'number') return police.stars;
-    return result.wanted || 0;
+    return 0;
   }
 
   buildMissionView(result) {

@@ -61,8 +61,8 @@ export class Game {
 
     this.city = createCity(this.scene, {});
     this.player = new Player(this.scene, {});
-    this.traffic = new Traffic(this.scene, { city: this.city });
-    this.pedestrians = new Pedestrians(this.scene, { city: this.city });
+    this.traffic = new Traffic(this.scene, { city: this.city, roads: this.city.roads });
+    this.pedestrians = new Pedestrians(this.scene, { city: this.city, roads: this.city.roads });
     this.combat = new Combat(this.scene, { player: this.player });
     this.police = new Police(this.scene, { city: this.city, player: this.player });
     this.missions = new Missions({ player: this.player });
