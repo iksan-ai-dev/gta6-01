@@ -25,6 +25,7 @@ export class Game {
     this.saveTimer = 0;
     this.district = null;
     this.cars = [];
+    this.shotStaged = false;
 
     this.startScreen = this.findScreen([
       'start-screen', 'startScreen', 'menu', 'title-screen', 'title',
@@ -243,7 +244,9 @@ export class Game {
     }
 
     this.updateMissionProgress();
-    this.updateHud(district || this.district, nowMs);
+    if (!this.shotStaged) {
+      this.updateHud(district || this.district, nowMs);
+    }
 
     this.saveTimer += dt;
     if (this.saveTimer >= AUTO_SAVE_INTERVAL) {

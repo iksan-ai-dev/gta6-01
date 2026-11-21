@@ -233,6 +233,18 @@ export class Shots {
     return Object.assign({ shot: name, seed: this.seed }, extra);
   }
 
+  blockade() {
+    // Six cruisers in a wide V, 12-40 m ahead, facing back toward the player.
+    return [
+      { x: 0, z: -12 },
+      { x: -5, z: -19 },
+      { x: 5, z: -19 },
+      { x: -10, z: -28 },
+      { x: 10, z: -28 },
+      { x: 0, z: -40 },
+    ].map((p) => ({ ...p, heading: Math.PI }));
+  }
+
   // --- the four scenes ---
 
   stageDrive(rng) {
@@ -272,14 +284,7 @@ export class Shots {
     const heading = 0; // north
     this.putPlayerInCar(x, z, heading);
     // Six cruisers in a wide V, 12-40 m ahead, each facing back toward the player.
-    const blockade = [
-      { x: 0, z: -12 },
-      { x: -5, z: -19 },
-      { x: 5, z: -19 },
-      { x: -10, z: -28 },
-      { x: 10, z: -28 },
-      { x: 0, z: -40 },
-    ].map((p) => ({ ...p, heading: Math.PI })); // facing south, back at the player
+    const blockade = this.blockade();
     if (this.game.police && typeof this.game.police.stage === 'function') {
       this.game.police.stage(blockade);
     }
@@ -365,15 +370,50 @@ export class Shots {
     if (this.game.startScreen) this.game.startScreen.classList.add('hidden');
     if (this.game.pauseScreen) this.game.pauseScreen.classList.add('hidden');
 
-    // A clean shot must not carry leftover heat from earlier staging.
-    if (result && result.wanted === 0) {
-      const police = this.game.police;
-      if (police && typeof police.clearHeat === 'function') police.clearHeat();
-    }
+    // Pin the police state to the shot's intent so the stars, the cruiser
+    // count and the wanted readout all agree before the HUD refresh.
+    this.pinPolice(result);
+
+    // Stop the running game loop from overwriting the pinned HUD.
+    this.game.shotStaged = true;
 
     this.updateHud(result);
     window.__shotReady = true;
     window.__game = this.game;
+  }
+
+  pinPolice(result) {
+    const police = this.game.police;
+    if (!police) return;
+    const wanted = result && typeof result.wanted === 'number' ? result.wanted : 0;
+
+    if (wanted === 0) {
+      // No heat, no cruisers.
+      if (typeof police.clearHeat === 'function') police.clearHeat();
+      return;
+    }
+
+    if (wanted === 5) {
+      // Five stars plus the blockade cruisers the chase shot expects.
+      if (typeof police.addHeat === 'function') police.addHeat(100);
+      if (typeof police.stage === 'function') police.stage(this.blockade());
+      return;
+    }
+
+    if (wanted === 1) {
+      // Exactly one star and no cruisers.
+      if (typeof police.clearHeat === 'function') police.clearHeat();
+      if (typeof police.addHeat === 'function') police.addHeat(20);
+      if (typeof police.clear === 'function') police.clear();
+      return;
+    }
+
+    if (wanted === 3) {
+      // Exactly three stars and no cruisers.
+      if (typeof police.clearHeat === 'function') police.clearHeat();
+      if (typeof police.addHeat === 'function') police.addHeat(60);
+      if (typeof police.clear === 'function') police.clear();
+    }
   }
 
   updateHud(result) {
