@@ -43,8 +43,8 @@ export class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0d14);
-    this.scene.fog = new THREE.Fog(0x0a0d14, 90, 520);
+    this.scene.background = new THREE.Color(0x141a26);
+    this.scene.fog = new THREE.Fog(0x141a26, 140, 700);
 
     this.camera = new THREE.PerspectiveCamera(
       60,
@@ -54,10 +54,11 @@ export class Game {
     );
     this.camera.position.set(0, 4, 12);
 
-    const hemi = new THREE.HemisphereLight(0x8fb3d9, 0x2c3138, 0.75);
-    const sun = new THREE.DirectionalLight(0xffc37d, 1.4);
+    const hemi = new THREE.HemisphereLight(0x8fb3d9, 0x2c3138, 1.35);
+    const sun = new THREE.DirectionalLight(0xffc37d, 2.2);
     sun.position.set(-90, 28, -70);
-    const ambient = new THREE.AmbientLight(0x404a5c, 0.4);
+    sun.castShadow = false;
+    const ambient = new THREE.AmbientLight(0x404a5c, 0.85);
     this.scene.add(hemi, sun, ambient);
 
     this.city = createCity(this.scene, {});
