@@ -364,36 +364,21 @@ export class Game {
   }
 
   missionView() {
-    const m = this.missions.active;
-    if (!m) return null;
-    const cur = this.missions.currentStep();
-    const steps = Array.isArray(m.steps)
-      ? m.steps
-      : (Array.isArray(m.sequence) ? m.sequence : null);
-    let stepObj = null;
-    let idx = 0;
-    if (typeof cur === 'number') {
-      idx = cur;
-      if (steps && steps[cur]) stepObj = steps[cur];
-    } else if (cur && typeof cur === 'object') {
-      stepObj = cur;
-      if (steps) {
-        const found = steps.indexOf(cur);
-        idx = found >= 0 ? found : 0;
-      }
-    } else {
-      idx = typeof m.step === 'number' ? m.step : 0;
-    }
-    const total = (steps && steps.length) || (typeof m.total === 'number' ? m.total : 1);
+    const active = this.missions.active;
+    if (!active) return null;
+    const mission = active.mission;
+    if (!mission) return null;
+    const stepIndex = typeof active.stepIndex === 'number' ? active.stepIndex : 0;
+    const steps = Array.isArray(mission.steps) ? mission.steps : [];
+    const stepObj = steps[stepIndex] || this.missions.currentStep() || null;
+    const total = steps.length || (typeof mission.total === 'number' ? mission.total : 1);
     return {
-      title: m.title || m.id || m.name || 'Mission',
-      step: idx + 1,
+      title: mission.title || mission.name || mission.id || 'Mission',
+      step: stepIndex + 1,
       total,
       objective: (stepObj && (stepObj.objective || stepObj.text || stepObj.name || stepObj.label))
-        || m.objective || '',
-      reward: (stepObj && typeof stepObj.reward === 'number')
-        ? stepObj.reward
-        : (typeof m.reward === 'number' ? m.reward : 0),
+        || mission.objective || '',
+      reward: typeof mission.reward === 'number' ? mission.reward : 0,
     };
   }
 
@@ -452,19 +437,15 @@ export class Game {
     const segments = [];
     for (const road of this.city.roads || []) {
       if (road.axis === 'x') {
-        segments.push({
-          x1: road.x - road.w / 2,
-          z1: road.z,
-          x2: road.x + road.w / 2,
-          z2: road.z,
-        });
+        segments.push([
+          [road.x - road.w / 2, road.z],
+          [road.x + road.w / 2, road.z],
+        ]);
       } else {
-        segments.push({
-          x1: road.x,
-          z1: road.z - road.d / 2,
-          x2: road.x,
-          z2: road.z + road.d / 2,
-        });
+        segments.push([
+          [road.x, road.z - road.d / 2],
+          [road.x, road.z + road.d / 2],
+        ]);
       }
     }
     return segments;
