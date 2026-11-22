@@ -113,8 +113,7 @@ export class Hud {
     if (this.weaponList) {
       this.weaponList.innerHTML = weapons.map((w) => {
         const sel = w.id === selectedId ? ' selected' : '';
-        const reserve = w.reserve != null ? w.reserve : '';
-        const ammo = reserve === '' ? `${w.ammo}` : `${w.ammo}/${reserve}`;
+        const ammo = this._ammo(w);
         return (
           `<div class="weapon-row${sel}" data-id="${this._esc(w.id)}">` +
           `<span class="weapon-label" style="text-transform:uppercase;letter-spacing:.05em">${this._esc(w.name)}</span>` +
@@ -127,8 +126,7 @@ export class Hud {
     if (selected) {
       if (this.weaponName) this.weaponName.textContent = selected.name;
       if (this.ammoText) {
-        const reserve = selected.reserve != null ? selected.reserve : '';
-        this.ammoText.textContent = reserve === '' ? `${selected.ammo}` : `${selected.ammo}/${reserve}`;
+        this.ammoText.textContent = this._ammo(selected);
       }
     }
   }
@@ -273,5 +271,10 @@ export class Hud {
     return String(s).replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     }[c]));
+  }
+
+  _ammo(w) {
+    if (!Number.isFinite(w.ammo)) return '∞';
+    return Number.isFinite(w.reserve) ? `${w.ammo}/${w.reserve}` : `${w.ammo}`;
   }
 }

@@ -33,12 +33,14 @@
 
     #loadout-panel { position: absolute; top: 210px; left: 14px; min-width: 150px; }
     #weapon-list { list-style: none; margin: 0; padding: 0; }
-    #weapon-list li { font-size: 13px; padding: 3px 0; color: #cfd8ea; }
+    #weapon-list .weapon-row, #police-list .police-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 3px 0; }
+    #weapon-list .weapon-row { font-size: 13px; color: #cfd8ea; }
+    #weapon-list .weapon-row.selected { color: #ffd479; font-weight: 600; }
 
     #cash-block { position: absolute; top: 14px; right: 14px; text-align: right; }
     #cash-line { font-size: 18px; font-weight: 700; color: #48d597; }
-    #stars-line { font-size: 16px; color: #f6c453; letter-spacing: 2px; }
-    #district-line { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #8fa3bd; }
+    #stars-line { font-size: 16px; color: #f6c453; letter-spacing: 2px; margin-bottom: 4px; }
+    #district-line { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #8fa3bd; margin-top: 0; }
 
     .star { color: #f6c453; }
     .star.empty { color: rgba(246,196,83,0.28); }
@@ -52,7 +54,8 @@
     #police-panel { position: absolute; top: 190px; right: 14px; min-width: 240px; }
     #police-count { font-size: 14px; font-weight: 700; color: #e25555; margin-bottom: 6px; }
     #police-list { list-style: none; margin: 0; padding: 0; max-height: 110px; overflow-y: auto; }
-    #police-list li { font-size: 12px; color: #f0b9b9; padding: 2px 0; }
+    #police-list .police-row { font-size: 12px; color: #f0b9b9; }
+    .weapon-ammo, .police-distance { margin-left: auto; opacity: .85; }
 
     #bars { position: absolute; bottom: 16px; left: 16px; }
     .bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
