@@ -15,8 +15,8 @@ function mulberry32(seed) {
 const PAVEMENT_OFFSET = 6.5;
 
 const MUTED_COLORS = [
-  '#6b5b4f', '#5a6b5a', '#6b6b6b', '#5b5b6b', '#7a6b5a',
-  '#5f5f5f', '#6b5a5a', '#4f5a5b', '#78624d', '#5d5d6b',
+  '#b8a08a', '#9db3a0', '#a8a8b0', '#9aa2bd', '#c4a882',
+  '#a0a0a8', '#b09292', '#8fa4a8', '#c0a882', '#a2a2bc',
 ];
 const SKIN_COLORS = ['#d9b08c', '#c9946d', '#e0b596', '#b98a67', '#d2a17a'];
 

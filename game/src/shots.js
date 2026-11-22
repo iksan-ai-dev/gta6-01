@@ -6,6 +6,7 @@
 // harness can capture it. Once staging completes, `window.__shotReady` is set
 // to true and `window.__game` exposes the live game state.
 
+import * as THREE from 'three';
 import { WEAPONS } from './combat.js';
 
 const DEFAULT_SHOT = 'drive';
@@ -121,10 +122,30 @@ export class Shots {
       const mesh = car.mesh || car;
       setXZ(mesh && mesh.position ? mesh.position : mesh, x, z);
       setHeadingOn(car, heading);
+      this.attachCarLights(mesh);
     }
     setXZ(player.position, x, z);
     if (typeof player.setHeading === 'function') player.setHeading(heading);
     return car;
+  }
+
+  attachCarLights(mesh) {
+    if (!mesh || typeof mesh.add !== 'function' || mesh.userData.nightLights) return;
+    mesh.userData.nightLights = true;
+
+    // Headlights: a warm spot thrown down the road ahead of the nose (-z).
+    const head = new THREE.SpotLight(0xffe6b8, 260, 130, Math.PI / 4.6, 0.5, 1.1);
+    head.position.set(0, 1.0, -2.0);
+    head.target.position.set(0, 0, -52);
+    mesh.add(head);
+    mesh.add(head.target);
+
+    // Rim light: a cool spot behind and above, separating the car from the dark.
+    const rim = new THREE.SpotLight(0xbcd4f0, 190, 34, Math.PI / 3.2, 0.7, 1.6);
+    rim.position.set(0, 3.4, 9.5);
+    rim.target.position.set(0, 0.7, 0);
+    mesh.add(rim);
+    mesh.add(rim.target);
   }
 
   positionCamera(behindM, upM, lookAheadM, subjectX, subjectZ, heading) {
@@ -313,6 +334,15 @@ export class Shots {
     }
     this.startMission('the-drop');
     this.equipSmg();
+    // Eight pedestrians crowd the two pavements 4.5-19 m ahead, four per side,
+    // alternating heading 0 and Math.PI.
+    const aheadDists = [4.5, 9.3, 14.1, 18.9];
+    const peds = [];
+    for (let i = 0; i < 4; i += 1) {
+      peds.push({ x: x + 8, z: z - aheadDists[i], heading: i % 2 === 0 ? 0 : Math.PI });
+      peds.push({ x: x - 7, z: z - aheadDists[i], heading: i % 2 === 0 ? Math.PI : 0 });
+    }
+    this.pinPedestrians(peds);
     this.positionCamera(11, 4.8, 20, x, z, heading);
     return this.describe('chase', {
       description: 'car heading north into a six-cruiser police blockade',

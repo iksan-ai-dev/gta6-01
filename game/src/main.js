@@ -45,20 +45,8 @@ export class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    const skyCanvas = document.createElement('canvas');
-    skyCanvas.width = 2; skyCanvas.height = 256;
-    const sctx = skyCanvas.getContext('2d');
-    const grad = sctx.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0.0, '#3f8fd0');
-    grad.addColorStop(0.45, '#8ec9e8');
-    grad.addColorStop(0.72, '#d6ebf5');
-    grad.addColorStop(1.0, '#f6e7c8');
-    sctx.fillStyle = grad;
-    sctx.fillRect(0, 0, 2, 256);
-    const skyTex = new THREE.CanvasTexture(skyCanvas);
-    skyTex.magFilter = THREE.LinearFilter;
-    this.scene.background = skyTex;
-    this.scene.fog = new THREE.Fog(0x9fd0e8, 220, 900);
+    this.scene.background = new THREE.Color(0x141a26);
+    this.scene.fog = new THREE.Fog(0x141a26, 170, 820);
 
     this.camera = new THREE.PerspectiveCamera(
       60,
@@ -68,9 +56,9 @@ export class Game {
     );
     this.camera.position.set(0, 4, 12);
 
-    const hemi = new THREE.HemisphereLight(0xcfeaf8, 0x7a6a52, 1.15);
-    const sun = new THREE.DirectionalLight(0xfff0c8, 4.2);
-    sun.position.set(-90, 28, -70);
+    const hemi = new THREE.HemisphereLight(0x9ec2e0, 0x3a3f4a, 1.05);
+    const sun = new THREE.DirectionalLight(0xffb370, 3.0);
+    sun.position.set(-90, 18, -70);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.left = -260;
@@ -83,7 +71,7 @@ export class Game {
     sun.shadow.normalBias = 0.02;
     this.sun = sun;
     this.sunOffset = new THREE.Vector3(-120, 16, -95);
-    const ambient = new THREE.AmbientLight(0x9fb4c8, 0.42);
+    const ambient = new THREE.AmbientLight(0x4a5b74, 0.55);
     this.scene.add(hemi, sun, ambient, sun.target);
 
     this.city = createCity(this.scene, {});

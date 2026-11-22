@@ -27,15 +27,15 @@ export function createCity(scene, options = {}) {
     { name: 'Old Town', x: -120, z: -140, radius: 80 },
   ];
 
-  const matGround = new THREE.MeshLambertMaterial({ color: 0x8d8f88 });
-  const matRoad = new THREE.MeshLambertMaterial({ color: 0x5f646c });
-  const matKerb = new THREE.MeshLambertMaterial({ color: 0xd8d2c4 });
-  const matSand = new THREE.MeshLambertMaterial({ color: 0xe8d5a8 });
-  const matWater = new THREE.MeshLambertMaterial({ color: 0x2a9db8 });
-  const facadeMats = [0xe8e0d0, 0xd9a894, 0x8fc4c4, 0xe0b890].map(c => new THREE.MeshLambertMaterial({ color: c }));
-  const matWindow = new THREE.MeshStandardMaterial({ color: 0x9fd4e8, emissive: 0x9fd4e8, emissiveIntensity: 0.12 });
-  const matLamp = new THREE.MeshLambertMaterial({ color: 0x9aa0a8 });
-  const matLampGlow = new THREE.MeshStandardMaterial({ color: 0xfff4e0, emissive: 0xfff4e0, emissiveIntensity: 0.35 });
+  const matGround = new THREE.MeshLambertMaterial({ color: 0x2b3040 });
+  const matRoad = new THREE.MeshLambertMaterial({ color: 0x4a5162 });
+  const matKerb = new THREE.MeshLambertMaterial({ color: 0x8a90a0 });
+  const matSand = new THREE.MeshLambertMaterial({ color: 0xd9c49a });
+  const matWater = new THREE.MeshLambertMaterial({ color: 0x1d4a63 });
+  const facadeMats = [0x4a4f5e, 0x5a5148, 0x3f4657, 0x6a5d52].map(c => new THREE.MeshLambertMaterial({ color: c }));
+  const matWindow = new THREE.MeshStandardMaterial({ color: 0xffb15e, emissive: 0xffb15e, emissiveIntensity: 0.85 });
+  const matLamp = new THREE.MeshLambertMaterial({ color: 0x7c8496 });
+  const matLampGlow = new THREE.MeshStandardMaterial({ color: 0xffb15e, emissive: 0xffb15e, emissiveIntensity: 2.2 });
   const matTrunk = new THREE.MeshLambertMaterial({ color: 0x7a5c3c });
   const matFrond = new THREE.MeshLambertMaterial({ color: 0x3f9a4c });
   const containerMats = [0xc9453f, 0x2b9c9c, 0xd8b03a].map(c => new THREE.MeshLambertMaterial({ color: c }));
@@ -239,7 +239,7 @@ export function createCity(scene, options = {}) {
     },
     update(dt) {
       clock += dt;
-      matLampGlow.emissiveIntensity = 1.0 + Math.sin(clock * 2) * 0.3;
+      matLampGlow.emissiveIntensity = 2.2 + Math.sin(clock * 2) * 0.3;
     },
     dispose() {
       scene.remove(group);
