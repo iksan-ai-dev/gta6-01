@@ -456,7 +456,13 @@ export class Shots {
     if (typeof hud.setSpeed === 'function') hud.setSpeed(this.speedKmh(result));
 
     if (typeof hud.setSubtitle === 'function') {
-      hud.setSubtitle(result.description || result.shot);
+      const SUBTITLE_BY_SHOT = {
+        chase: 'Lose them before the bridge!',
+        drive: 'Docks in five. Keep it clean.',
+        mission: 'Package is inside. In and out.',
+        onfoot: 'They made us. Move!',
+      };
+      hud.setSubtitle(SUBTITLE_BY_SHOT[result.shot] || '', 6);
     }
 
     // Draw the minimap in screenshot mode too.
