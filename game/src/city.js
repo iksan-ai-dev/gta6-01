@@ -13,6 +13,9 @@ function mulberry32(seed) {
 export function createCity(scene, options = {}) {
   const rand = mulberry32(options.seed ?? 1337);
   const group = new THREE.Group();
+  group.traverse((o) => {
+    if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+  });
   if (scene) scene.add(group);
   const roads = [];
   const buildings = [];
@@ -24,15 +27,15 @@ export function createCity(scene, options = {}) {
     { name: 'Old Town', x: -120, z: -140, radius: 80 },
   ];
 
-  const matGround = new THREE.MeshLambertMaterial({ color: 0x2b3040 });
-  const matRoad = new THREE.MeshLambertMaterial({ color: 0x4a5162 });
-  const matKerb = new THREE.MeshLambertMaterial({ color: 0x8a90a0 });
-  const matSand = new THREE.MeshLambertMaterial({ color: 0xd9c49a });
-  const matWater = new THREE.MeshLambertMaterial({ color: 0x1d4a63 });
-  const facadeMats = [0x4a4f5e, 0x5a5148, 0x3f4657, 0x6a5d52].map(c => new THREE.MeshLambertMaterial({ color: c }));
-  const matWindow = new THREE.MeshStandardMaterial({ color: 0xffb15e, emissive: 0xffb15e, emissiveIntensity: 0.85 });
-  const matLamp = new THREE.MeshLambertMaterial({ color: 0x7c8496 });
-  const matLampGlow = new THREE.MeshStandardMaterial({ color: 0xffcf8a, emissive: 0xffb15e, emissiveIntensity: 2.2 });
+  const matGround = new THREE.MeshLambertMaterial({ color: 0x8d8f88 });
+  const matRoad = new THREE.MeshLambertMaterial({ color: 0x5f646c });
+  const matKerb = new THREE.MeshLambertMaterial({ color: 0xd8d2c4 });
+  const matSand = new THREE.MeshLambertMaterial({ color: 0xe8d5a8 });
+  const matWater = new THREE.MeshLambertMaterial({ color: 0x2a9db8 });
+  const facadeMats = [0xe8e0d0, 0xd9a894, 0x8fc4c4, 0xe0b890].map(c => new THREE.MeshLambertMaterial({ color: c }));
+  const matWindow = new THREE.MeshStandardMaterial({ color: 0x9fd4e8, emissive: 0x9fd4e8, emissiveIntensity: 0.12 });
+  const matLamp = new THREE.MeshLambertMaterial({ color: 0x9aa0a8 });
+  const matLampGlow = new THREE.MeshStandardMaterial({ color: 0xfff4e0, emissive: 0xfff4e0, emissiveIntensity: 0.35 });
   const matTrunk = new THREE.MeshLambertMaterial({ color: 0x7a5c3c });
   const matFrond = new THREE.MeshLambertMaterial({ color: 0x3f9a4c });
   const containerMats = [0xc9453f, 0x2b9c9c, 0xd8b03a].map(c => new THREE.MeshLambertMaterial({ color: c }));
@@ -53,7 +56,24 @@ export function createCity(scene, options = {}) {
   water.position.set(285, 0.06, 285);
   group.add(water);
 
+  const matDash = new THREE.MeshBasicMaterial({ color: 0xf2f0e4 });
   const roadLen = 620;
+  const addLaneDashes = (cx, cz, len, axis) => {
+    const step = 12;
+    const n = Math.floor(len / step);
+    for (let i = 0; i < n; i++) {
+      const t = -len / 2 + i * step + step / 2;
+      const d = new THREE.Mesh(unitBox, matDash);
+      if (axis === 'x') {
+        d.scale.set(4, 0.02, 0.34);
+        d.position.set(cx + t, 0.055, cz);
+      } else {
+        d.scale.set(0.34, 0.02, 4);
+        d.position.set(cx, 0.055, cz + t);
+      }
+      group.add(d);
+    }
+  };
   const roadPositions = [-225, -135, -45, 45, 135, 225];
   const addKerb = (cx, cz, len, axis) => {
     const off = 5 + 0.2;
@@ -76,6 +96,7 @@ export function createCity(scene, options = {}) {
     group.add(road);
     roads.push({ x: 0, z, w: roadLen, d: 10, axis: 'x' });
     addKerb(0, z, roadLen, 'x');
+    addLaneDashes(0, z, roadLen, 'x');
   }
   for (const x of roadPositions) {
     const road = new THREE.Mesh(unitBox, matRoad);
@@ -84,6 +105,7 @@ export function createCity(scene, options = {}) {
     group.add(road);
     roads.push({ x, z: 0, w: 10, d: roadLen, axis: 'z' });
     addKerb(x, 0, roadLen, 'z');
+    addLaneDashes(x, 0, roadLen, 'z');
   }
 
   const windowInstances = [];
@@ -130,10 +152,10 @@ export function createCity(scene, options = {}) {
     for (let iz = 0; iz < roadPositions.length - 1; iz++) {
       const xMin = roadPositions[ix] + 5, xMax = roadPositions[ix + 1] - 5;
       const zMin = roadPositions[iz] + 5, zMax = roadPositions[iz + 1] - 5;
-      for (let b = 0; b < 5; b++) placeBuilding(xMin, xMax, zMin, zMax);
+      for (let b = 0; b < 16; b++) placeBuilding(xMin, xMax, zMin, zMax);
     }
   }
-  for (let i = 0; i < 5; i++) placeBuilding(-40, 40, -40, 40);
+  for (let i = 0; i < 10; i++) placeBuilding(-40, 40, -40, 40);
 
   if (windowInstances.length > 0) {
     const winMesh = new THREE.InstancedMesh(unitBox, matWindow, windowInstances.length);
@@ -199,7 +221,7 @@ export function createCity(scene, options = {}) {
     }
   }
 
-  if (!scene.fog) scene.fog = new THREE.Fog(0x0d1520, 60, 320);
+  if (!scene.fog) scene.fog = new THREE.Fog(0x9fd0e8, 220, 900);
 
   let clock = 0;
   return {

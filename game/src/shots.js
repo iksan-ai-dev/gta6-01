@@ -69,7 +69,7 @@ export class Shots {
     this.game = game;
     window.__game = game;
     const { shot, seed } = shotFromQuery();
-    if (shot) this.stage(shot, seed);
+    this.pending = shot ? { shot, seed } : null;
   }
 
   stage(name, seed) {
@@ -205,13 +205,22 @@ export class Shots {
 
   spawnEnemies(entries) {
     const combat = this.game.combat;
-    if (!combat) return;
-    const spawn = combat.spawnEnemies || combat.spawnHostiles || combat.spawn;
-    if (typeof spawn === 'function') {
-      spawn.call(combat, entries);
-      return;
+    if (!combat) return [];
+    // Combat exposes spawnEnemy(x, z, options); fall back to repositioning
+    // any pre-built enemies when that method is missing.
+    if (typeof combat.spawnEnemy === 'function') {
+      const made = [];
+      for (const e of entries) {
+        const enemy = combat.spawnEnemy(e.x, e.z, { health: 100 });
+        if (enemy) {
+          if (enemy.mesh) enemy.mesh.visible = true;
+          setHeadingOn(enemy, e.heading);
+          made.push(enemy);
+        }
+      }
+      return made;
     }
-    const actors = combat.enemies || combat.hostiles || [];
+    const actors = combat.enemies || [];
     entries.forEach((e, i) => {
       const a = actors[i];
       if (!a) return;
@@ -219,6 +228,7 @@ export class Shots {
       setXZ(mesh && mesh.position ? mesh.position : mesh, e.x, e.z);
       setHeadingOn(a, e.heading);
     });
+    return actors.slice(0, entries.length);
   }
 
   setWeather(weather, time) {
@@ -267,8 +277,14 @@ export class Shots {
     }
     this.pinTraffic(traffic);
     this.pinPedestrians([
-      { x: x + 7, z: z + 5, heading: Math.PI },
-      { x: x - 7, z: z + 8, heading: 0 },
+      { x: x + 6.2, z: z - 11, heading: Math.PI },
+      { x: x - 6.2, z: z - 14, heading: 0 },
+      { x: x + 6.2, z: z - 19, heading: Math.PI },
+      { x: x - 6.2, z: z - 24, heading: 0 },
+      { x: x + 6.2, z: z - 31, heading: Math.PI },
+      { x: x - 6.2, z: z - 38, heading: 0 },
+      { x: x + 6.2, z: z - 48, heading: Math.PI },
+      { x: x - 6.2, z: z - 58, heading: 0 },
     ]);
     this.positionCamera(11, 5, 20, x, z, heading);
     return this.describe('drive', {
@@ -318,12 +334,19 @@ export class Shots {
     const px = ox;
     const pz = oz + 24; // 24 m south of the objective marker
     const player = this.game.player;
+    if (typeof player.exitCar === 'function' && player.inCar) player.exitCar();
+    if (player.mesh) player.mesh.visible = true;
     setXZ(player.position, px, pz);
     if (typeof player.setHeading === 'function') player.setHeading(heading);
+    if (player.mesh) player.mesh.position.copy(player.position);
     if (this.game.police && typeof this.game.police.addHeat === 'function') {
       this.game.police.addHeat(1);
     }
-    this.pinPedestrians([{ x: px + 4, z: pz - 1, heading: heading }]);
+    this.pinPedestrians([
+      { x: px + 3.4, z: pz - 6, heading: Math.PI },
+      { x: px - 3.4, z: pz - 13, heading: 0 },
+      { x: px + 3.4, z: pz - 21, heading: Math.PI },
+    ]);
     this.positionCamera(7, 3.5, 24, px, pz, heading);
     return this.describe('mission', {
       description: 'on foot 24 m south of the objective marker',
@@ -340,8 +363,11 @@ export class Shots {
     const z = 180;
     const heading = 0; // north
     const player = this.game.player;
+    if (typeof player.exitCar === 'function' && player.inCar) player.exitCar();
+    if (player.mesh) player.mesh.visible = true;
     setXZ(player.position, x, z);
     if (typeof player.setHeading === 'function') player.setHeading(heading);
+    if (player.mesh) player.mesh.position.copy(player.position);
     if (this.game.police && typeof this.game.police.addHeat === 'function') {
       this.game.police.addHeat(3);
     }
@@ -370,6 +396,9 @@ export class Shots {
   // --- HUD + finalize ---
 
   finalize(result) {
+    // Show the reticle for on-foot weapon shots, hide it for driving shots.
+    const cross = document.getElementById('crosshair');
+    if (cross) cross.classList.toggle('on', result.onFoot === true && !!result.weapon);
     // Hide the start and pause screens so only the HUD is captured.
     if (this.game.startScreen) this.game.startScreen.classList.add('hidden');
     if (this.game.pauseScreen) this.game.pauseScreen.classList.add('hidden');

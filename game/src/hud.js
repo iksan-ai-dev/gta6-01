@@ -169,8 +169,8 @@ export class Hud {
     ctx.fillRect(0, 0, w, h);
 
     // Roads.
-    ctx.strokeStyle = '#2c3644';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#8fa6bd';
+    ctx.lineWidth = 3;
     ctx.beginPath();
     for (const road of state.roads || []) {
       const segments = this._isSegment(road) ? [road] : road;
@@ -188,12 +188,12 @@ export class Hud {
     ctx.stroke();
 
     // Police units as small blue dots.
-    ctx.fillStyle = '#3b82f6';
+    ctx.fillStyle = '#ff4d4d';
     for (const unit of state.police || []) {
       const [x, z] = this._pointXY(unit);
       const [cx, cy] = toCanvas(x, z);
       ctx.beginPath();
-      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
       ctx.fill();
     }
 

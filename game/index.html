@@ -29,6 +29,11 @@
     #hud .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #8fa3bd; margin: 0 0 6px; }
 
     #minimap-wrap { position: absolute; top: 14px; left: 14px; }
+    #crosshair { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; display: none; pointer-events: none; }
+    #crosshair.on { display: block; }
+    #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #eaf6ff; box-shadow: 0 0 4px rgba(0,0,0,0.9); }
+    #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; margin-left: -1px; }
+    #crosshair::after { top: 50%; left: 0; height: 2px; width: 100%; margin-top: -1px; }
     #minimap { display: block; border-radius: 4px; background: rgba(10,13,20,0.55); }
 
     #loadout-panel { position: absolute; top: 210px; left: 14px; min-width: 150px; }
@@ -40,7 +45,7 @@
     #cash-block { position: absolute; top: 14px; right: 14px; text-align: right; }
     #cash-line { font-size: 18px; font-weight: 700; color: #48d597; }
     #stars-line { font-size: 16px; color: #f6c453; letter-spacing: 2px; margin-bottom: 4px; }
-    #district-line { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #8fa3bd; margin-top: 0; }
+    #district-line { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: #f2f6fb; margin-top: 0; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
 
     .star { color: #f6c453; }
     .star.empty { color: rgba(246,196,83,0.28); }
@@ -51,10 +56,10 @@
     #mission-objective { font-size: 13px; color: #e8ecf4; line-height: 1.45; }
     #mission-reward { font-size: 12px; color: #48d597; margin-top: 8px; }
 
-    #police-panel { position: absolute; top: 190px; right: 14px; min-width: 240px; }
+    #police-panel { position: absolute; top: 178px; right: 14px; min-width: 240px; }
     #police-count { font-size: 14px; font-weight: 700; color: #e25555; margin-bottom: 6px; }
-    #police-list { list-style: none; margin: 0; padding: 0; max-height: 110px; overflow-y: auto; }
-    #police-list .police-row { font-size: 12px; color: #f0b9b9; }
+    #police-list { list-style: none; margin: 0; padding: 0; max-height: none; overflow: visible; }
+    #police-list .police-row { font-size: 12px; color: #f0b9b9; line-height: 1.35; }
     .weapon-ammo, .police-distance { margin-left: auto; opacity: .85; }
 
     #bars { position: absolute; bottom: 16px; left: 16px; }
@@ -79,6 +84,7 @@
   <canvas id="game"></canvas>
 
   <div id="hud" class="hidden">
+    <div id="crosshair"></div>
     <div id="minimap-wrap" class="panel">
       <canvas id="minimap" width="180" height="180"></canvas>
     </div>
